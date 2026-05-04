@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solis Engine — Live Dashboard</title>
+<link rel="stylesheet" href="css/dashboard.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div id="setup-overlay" class="overlay">
+  <div class="setup-card">
+    <h2>Solis Dashboard 연결</h2>
+    <p>Oracle Cloud VM의 Solis API 주소와 키를 입력하세요. (브라우저 localStorage에 저장)</p>
+    <label>API URL <small>(예: http://1.2.3.4:8000 또는 https://solis.example.com)</small></label>
+    <input id="api-url" placeholder="http://YOUR_VM_IP:8000">
+    <label>API Key</label>
+    <input id="api-key" type="password" placeholder=".env의 DASHBOARD_API_KEY 값">
+    <button onclick="saveSetup()">연결</button>
+  </div>
+</div>
+
+<header>
+  <div class="brand">
+    <h1>⚡ Solis</h1>
+    <span class="version">v1.0</span>
+  </div>
+  <div class="status-pills">
+    <span id="pill-mode" class="pill mode">--</span>
+    <span id="pill-paused" class="pill paused hidden">⏸ 일시정지</span>
+    <span id="pill-kill" class="pill kill hidden">🚨 KILL</span>
+    <span id="pill-conn" class="pill conn">●</span>
+  </div>
+  <button class="reset" onclick="resetSetup()">설정 변경</button>
+</header>
+
+<main>
+  <!-- 상단 카드 -->
+  <section class="cards">
+    <div class="card">
+      <div class="label">잔고 (USDT)</div>
+      <div id="balance" class="value">--</div>
+      <div id="balance-sub" class="sub">레버리지 --x</div>
+    </div>
+    <div class="card">
+      <div class="label">오늘 PnL</div>
+      <div id="daily-pnl" class="value">--</div>
+      <div id="daily-pnl-sub" class="sub">--</div>
+    </div>
+    <div class="card">
+      <div class="label">활성 포지션</div>
+      <div id="position-count" class="value">0</div>
+      <div class="sub">동시 한도 1개</div>
+    </div>
+    <div class="card">
+      <div class="label">BTC 현재가</div>
+      <div id="btc-price" class="value">--</div>
+      <div id="btc-change" class="sub">--</div>
+    </div>
+  </section>
+
+  <!-- 통계 (전체·24h·7d) -->
+  <section class="stats-row">
+    <div class="stat-block">
+      <h3>전체 통계</h3>
+      <table>
+        <tr><td>총 거래</td><td id="total-trades">--</td></tr>
+        <tr><td>승률</td><td id="win-rate">--</td></tr>
+        <tr><td>총 PnL</td><td id="total-pnl">--</td></tr>
+        <tr><td>평균 수익률</td><td id="avg-pct">--</td></tr>
+      </table>
+    </div>
+    <div class="stat-block">
+      <h3>24h</h3>
+      <table>
+        <tr><td>거래 수</td><td id="day-trades">--</td></tr>
+        <tr><td>PnL</td><td id="day-pnl">--</td></tr>
+      </table>
+    </div>
+    <div class="stat-block">
+      <h3>7일</h3>
+      <table>
+        <tr><td>거래 수</td><td id="week-trades">--</td></tr>
+        <tr><td>PnL</td><td id="week-pnl">--</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- 활성 포지션 -->
+  <section class="block">
+    <h2>📈 활성 포지션</h2>
+    <table class="data-table">
+      <thead>
+        <tr><th>심볼</th><th>방향</th><th>진입가</th><th>현재가</th><th>TP</th><th>SL</th><th>수량</th><th>레버리지</th><th>PnL</th><th>모드</th></tr>
+      </thead>
+      <tbody id="positions-tbody">
+        <tr><td colspan="10" class="empty">활성 포지션 없음</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- BTC 가격 차트 -->
+  <section class="block">
+    <h2>📊 BTC/USDT 1H</h2>
+    <canvas id="price-chart" height="120"></canvas>
+  </section>
+
+  <!-- 최근 거래 -->
+  <section class="block">
+    <h2>📜 최근 거래 (최대 50건)</h2>
+    <table class="data-table">
+      <thead>
+        <tr><th>시각 (UTC)</th><th>심볼</th><th>방향</th><th>진입</th><th>청산</th><th>PnL</th><th>%</th><th>이유</th><th>모드</th></tr>
+      </thead>
+      <tbody id="trades-tbody">
+        <tr><td colspan="9" class="empty">거래 이력 없음</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 제어 -->
+  <section class="block control">
+    <h2>🎮 제어</h2>
+    <button class="btn pause" onclick="apiCall('pause', 'POST')">⏸ Pause</button>
+    <button class="btn resume" onclick="apiCall('resume', 'POST')">▶ Resume</button>
+    <button class="btn kill" onclick="confirmKill()">🚨 Kill Switch</button>
+    <span id="control-result"></span>
+  </section>
+</main>
+
+<footer>
+  <small>마지막 갱신: <span id="last-update">--</span> | 갱신 주기: 5초</small>
+</footer>
+
+<script src="js/dashboard.js"></script>
+</body>
+</html>
