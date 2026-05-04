@@ -100,10 +100,15 @@
     </table>
   </section>
 
-  <!-- BTC 가격 차트 -->
+  <!-- 누적 손익 추이 -->
   <section class="block">
-    <h2>📊 BTC/USDT 1H</h2>
-    <canvas id="price-chart" height="120"></canvas>
+    <h2>📈 누적 손익 추이 (Equity Curve)</h2>
+    <div class="equity-summary">
+      <span>시작 잔고: <b id="eq-start">--</b></span>
+      <span>현재 잔고: <b id="eq-current">--</b></span>
+      <span>누적 PnL: <b id="eq-total">--</b></span>
+    </div>
+    <canvas id="equity-chart" height="120"></canvas>
   </section>
 
   <!-- 최근 거래 -->

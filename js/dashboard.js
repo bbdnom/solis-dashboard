@@ -2,8 +2,7 @@
 const STORAGE_KEY = 'solis_dashboard_setup';
 let API_URL = '';
 let API_KEY = '';
-let priceChart = null;
-let priceHistory = [];
+let equityChart = null;
 
 function loadSetup() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -154,7 +153,6 @@ async function refreshStats() {
 }
 
 async function refreshBTCPrice() {
-  // Binance 공개 API 직접 호출 (인증 X)
   try {
     const r = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT');
     const d = await r.json();
@@ -164,40 +162,71 @@ async function refreshBTCPrice() {
     const sub = document.getElementById('btc-change');
     sub.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '% (24h)';
     sub.style.color = change >= 0 ? '#10b981' : '#ef4444';
-
-    priceHistory.push({ t: Date.now(), p: price });
-    if (priceHistory.length > 60) priceHistory.shift();
-    updateChart();
   } catch (e) {
     console.error('BTC price fetch error:', e);
   }
 }
 
-function initChart() {
-  const ctx = document.getElementById('price-chart').getContext('2d');
-  priceChart = new Chart(ctx, {
+async function refreshEquity() {
+  const d = await fetchAPI('/equity');
+  if (!d) return;
+  document.getElementById('eq-start').textContent = '$' + Number(d.start_balance).toFixed(4);
+  document.getElementById('eq-current').textContent = '$' + Number(d.current_balance).toFixed(4);
+  const totalEl = document.getElementById('eq-total');
+  totalEl.textContent = (d.total_pnl >= 0 ? '+' : '') + '$' + Number(d.total_pnl).toFixed(4);
+  totalEl.style.color = d.total_pnl >= 0 ? '#10b981' : '#ef4444';
+
+  // points가 비어있으면 (거래 없음) 시작·현재 잔고만 표시
+  let points = d.points;
+  if (points.length <= 1) {
+    points = [
+      { ts: Date.now() - 3600000, equity: d.start_balance, pnl: 0 },
+      { ts: Date.now(),           equity: d.current_balance, pnl: 0 },
+    ];
+  }
+  if (!equityChart) initEquityChart();
+  equityChart.data.labels = points.map(p => new Date(p.ts).toLocaleString('ko-KR', {
+    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+  }));
+  equityChart.data.datasets[0].data = points.map(p => p.equity);
+  // 시작 잔고 기준선
+  equityChart.data.datasets[1].data = points.map(_ => d.start_balance);
+  equityChart.update('none');
+}
+
+function initEquityChart() {
+  const ctx = document.getElementById('equity-chart').getContext('2d');
+  equityChart = new Chart(ctx, {
     type: 'line',
-    data: { labels: [], datasets: [{
-      label: 'BTC/USDT', data: [],
-      borderColor: '#4f9cf9', backgroundColor: 'rgba(79,156,249,0.1)',
-      tension: 0.2, pointRadius: 0,
-    }]},
+    data: { labels: [], datasets: [
+      {
+        label: 'Equity', data: [],
+        borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)',
+        tension: 0.2, pointRadius: 2, pointBackgroundColor: '#10b981',
+        fill: true,
+      },
+      {
+        label: 'Start', data: [],
+        borderColor: '#777', borderDash: [5, 5], borderWidth: 1,
+        pointRadius: 0, fill: false,
+      },
+    ]},
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { labels: { color: '#999' } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => '$' + Number(ctx.parsed.y).toFixed(4),
+          },
+        },
+      },
       scales: {
         x: { ticks: { color: '#777', maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: '#2a3144' } },
-        y: { ticks: { color: '#777' }, grid: { color: '#2a3144' } },
+        y: { ticks: { color: '#777', callback: v => '$' + Number(v).toFixed(2) }, grid: { color: '#2a3144' } },
       },
     },
   });
-}
-
-function updateChart() {
-  if (!priceChart) return;
-  priceChart.data.labels = priceHistory.map(p => new Date(p.t).toLocaleTimeString());
-  priceChart.data.datasets[0].data = priceHistory.map(p => p.p);
-  priceChart.update('none');
 }
 
 async function apiCall(action, method) {
@@ -226,13 +255,12 @@ async function tick() {
     refreshPositions(),
     refreshStats(),
     refreshBTCPrice(),
+    refreshEquity(),
   ]);
   document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
 }
 
-let tradeInterval = null;
 function init() {
-  initChart();
   tick();
   refreshTrades();
   setInterval(tick, 5000);

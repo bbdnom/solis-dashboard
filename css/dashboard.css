@@ -100,6 +100,13 @@ main { max-width: 1400px; margin: 0 auto; padding: 24px; }
 
 footer { text-align: center; padding: 24px; color: #555; font-size: 12px; }
 
+.equity-summary {
+  display: flex; gap: 24px; margin-bottom: 16px; padding: 12px;
+  background: #20263a; border-radius: 6px; font-size: 13px;
+}
+.equity-summary span { color: #999; }
+.equity-summary b { color: #fff; font-family: monospace; margin-left: 6px; }
+
 @media (max-width: 768px) {
   header { flex-wrap: wrap; gap: 8px; }
   .brand { width: 100%; }
